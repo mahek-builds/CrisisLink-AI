@@ -20,7 +20,7 @@ rc = RedisCluster(
 
 # Test connection
 try:
-    rc.set("test_key", "Hello Redis 🚀")
+    rc.set("test_key", "Hello Redis ")
     value = rc.get("test_key")
     print("Connected successfully!")
     print("Value:", value)

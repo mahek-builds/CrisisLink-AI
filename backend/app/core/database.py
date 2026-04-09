@@ -1,15 +1,64 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.orm import declarative_base, sessionmaker
+import os
+from dotenv import load_dotenv
+
+# Load .env
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Create engine
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True
+)
+
+# Session
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+# Base
+Base = declarative_base()
 
 
-DATABASE_URL = "postgresql://postgres:crisislink_@crisislink.c65uk20eedbd.us-east-1.rds.amazonaws.com:5432/crisislink"
+# ------------------ MODEL ------------------
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    email = Column(String)
 
 
-engine = create_engine(DATABASE_URL)
+# ------------------ CREATE TABLE ------------------
+Base.metadata.create_all(bind=engine)
 
-try:
-    with engine.connect() as connection:
-        # This sends a simple 'hello' to the database
-        result = connection.execute(text("SELECT 1"))
-        print(" Success! The database is reachable and credentials are correct.")
-except Exception as e:
-    print(f"Connection failed: {e}")
+
+# ------------------ DB DEPENDENCY ------------------
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# ------------------ TEST RUN ------------------
+if __name__ == "__main__":
+    db = SessionLocal()
+
+    # Insert test user
+    new_user = User(name="Hirdesh", email="hirdesh@example.com")
+    db.add(new_user)
+    db.commit()
+
+    # Fetch users
+    users = db.query(User).all()
+    for user in users:
+        print(user.id, user.name, user.email)
+
+    db.close()
