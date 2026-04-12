@@ -8,7 +8,7 @@ def get_reports_summary(db:Session,incident_id):
     result = db.execute(query, {"inc_id": incident_id})
     return [r.report_type for r in result]
 def check_user_reputation(db: Session, phone_number: str):
-    uery = text("""
+    query = text("""
         SELECT COUNT(*) FROM reports r
         JOIN incidents i ON r.incident_id = i.id
         WHERE r.phone_number = :phone AND i.status = 'false_alarm'
