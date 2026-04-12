@@ -1,5 +1,5 @@
 from fastapi import APIRouter,Depends,HTTPException
-from matplotlib import text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.db.supabase_client import get_db
 router=APIRouter()

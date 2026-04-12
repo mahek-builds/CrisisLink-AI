@@ -1,7 +1,7 @@
 from fastapi import APIRouter,Depends
-from sqlachemy.orm import Session
+from sqlalchemy.orm import Session
 from app.db.supabase_client import get_db
-from sqlachemy import text
+from sqlalchemy import text
 router=APIRouter()
 @router.get("/incident/{incident_id}")
 def get_reports_by_incidents(incident_id:str,db:Session=Depends(get_db)):
