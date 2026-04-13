@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../services/connectivity_service.dart';
 import '../theme/app_theme.dart';
 import 'sos_home_page.dart';
 
 class LaunchScreen extends StatefulWidget {
-  const LaunchScreen({super.key});
+  const LaunchScreen({
+    super.key,
+    required this.connectivityService,
+  });
 
   static const Duration displayDuration = Duration(seconds: 5);
+
+  final ConnectivityService connectivityService;
 
   @override
   State<LaunchScreen> createState() => _LaunchScreenState();
@@ -43,7 +49,7 @@ class _LaunchScreenState extends State<LaunchScreen>
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 450),
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const SosHomePage(),
+            SosHomePage(connectivityService: widget.connectivityService),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(

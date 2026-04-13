@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -17,7 +19,7 @@ class SosEmergencyButton extends StatefulWidget {
   final double size;
   final double glowStrength;
   final Duration holdDuration;
-  final VoidCallback onActivated;
+  final FutureOr<void> Function() onActivated;
   final ValueChanged<bool>? onHoldStateChanged;
   final ValueChanged<double>? onHoldProgressChanged;
   final bool activated;
@@ -32,6 +34,8 @@ class _SosEmergencyButtonState extends State<SosEmergencyButton>
   bool _isHolding = false;
   bool _didTrigger = false;
 
+  int get _holdSeconds => widget.holdDuration.inSeconds;
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +49,7 @@ class _SosEmergencyButtonState extends State<SosEmergencyButton>
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed && !_didTrigger) {
           _didTrigger = true;
+          _isHolding = false;
           widget.onHoldStateChanged?.call(false);
           widget.onActivated();
         }
@@ -189,7 +194,7 @@ class _SosEmergencyButtonState extends State<SosEmergencyButton>
                               ? 'Emergency Alert Sent'
                               : _isHolding
                                   ? 'Keep holding...'
-                                  : 'Hold for 3 seconds',
+                                  : 'Hold for $_holdSeconds seconds',
                           key: const Key('sos-button-status'),
                           style: const TextStyle(
                             fontSize: 17,

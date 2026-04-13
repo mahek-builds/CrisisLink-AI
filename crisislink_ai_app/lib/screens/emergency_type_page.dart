@@ -1,0 +1,583 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import '../theme/app_theme.dart';
+
+enum EmergencyType { medical, safety, fire }
+
+enum EmergencyFlowStep { type, situation, sending }
+
+class EmergencyTypePage extends StatefulWidget {
+  const EmergencyTypePage({super.key});
+
+  static const routeName = '/emergency-type';
+
+  @override
+  State<EmergencyTypePage> createState() => _EmergencyTypePageState();
+}
+
+class _EmergencyTypePageState extends State<EmergencyTypePage> {
+  static const Map<EmergencyType, List<String>> _situationChips = {
+    EmergencyType.medical: [
+      'Unconscious',
+      'Injury',
+      'Breathing problem',
+      'Chest pain',
+    ],
+    EmergencyType.safety: [
+      'Assault',
+      'Robbery',
+      'Suspicious activity',
+      'Trapped',
+    ],
+    EmergencyType.fire: [
+      'Fire spreading',
+      'Smoke detected',
+      'Building fire',
+      'Explosion',
+    ],
+  };
+
+  EmergencyFlowStep _step = EmergencyFlowStep.type;
+  EmergencyType? _selectedType;
+  String? _selectedSituation;
+  Timer? _sendingTimer;
+
+  @override
+  void dispose() {
+    _sendingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _selectType(EmergencyType type) {
+    setState(() {
+      _selectedType = type;
+      _selectedSituation = null;
+      _step = EmergencyFlowStep.situation;
+    });
+  }
+
+  void _sendReport({String? situation}) {
+    setState(() {
+      _selectedSituation = situation;
+      _step = EmergencyFlowStep.sending;
+    });
+
+    _sendingTimer?.cancel();
+    _sendingTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Emergency report sent to responders.'),
+          ),
+        );
+
+      Navigator.of(context).maybePop();
+    });
+  }
+
+  void _handleExit() {
+    if (_step == EmergencyFlowStep.situation) {
+      setState(() {
+        _step = EmergencyFlowStep.type;
+        _selectedType = null;
+        _selectedSituation = null;
+      });
+      return;
+    }
+
+    Navigator.of(context).maybePop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(0, -0.05),
+            radius: 1.05,
+            colors: [
+              Color(0xFF210C0D),
+              Color(0xFF0C090A),
+              AppTheme.background,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                child: Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: _handleExit,
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFFC9C5CF),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                      ),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+                      label: const Text(
+                        'Exit',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    const Spacer(),
+                    const _StatusTag(
+                      icon: Icons.location_on_outlined,
+                      label: 'GPS',
+                    ),
+                    const SizedBox(width: 10),
+                    const _StatusTag(
+                      icon: Icons.wifi_rounded,
+                      label: 'Online',
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeOutCubic,
+                  child: switch (_step) {
+                    EmergencyFlowStep.type => _TypeStep(
+                        onTypeSelected: _selectType,
+                      ),
+                    EmergencyFlowStep.situation => _SituationStep(
+                        emergencyType: _selectedType!,
+                        situations: _situationChips[_selectedType!]!,
+                        onSendWithoutDescription: () => _sendReport(),
+                        onSituationSelected: (situation) =>
+                            _sendReport(situation: situation),
+                      ),
+                    EmergencyFlowStep.sending => _SendingStep(
+                        emergencyType: _selectedType!,
+                        situation: _selectedSituation,
+                      ),
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TypeStep extends StatelessWidget {
+  const _TypeStep({required this.onTypeSelected});
+
+  final ValueChanged<EmergencyType> onTypeSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      key: const ValueKey('type-step'),
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+      child: Column(
+        children: [
+          const SizedBox(height: 120),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                Text(
+                  'Select Emergency Type',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Choose the type of emergency',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppTheme.textMuted,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _EmergencyTypeCard(
+            title: 'Medical Emergency',
+            color: const Color(0xFF2961F2),
+            icon: Icons.medical_services_outlined,
+            onTap: () => onTypeSelected(EmergencyType.medical),
+          ),
+          const SizedBox(height: 12),
+          _EmergencyTypeCard(
+            title: 'Safety/Security',
+            color: const Color(0xFFF08400),
+            icon: Icons.shield_outlined,
+            onTap: () => onTypeSelected(EmergencyType.safety),
+          ),
+          const SizedBox(height: 12),
+          _EmergencyTypeCard(
+            title: 'Fire Emergency',
+            color: const Color(0xFFFF0012),
+            icon: Icons.local_fire_department_outlined,
+            onTap: () => onTypeSelected(EmergencyType.fire),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SituationStep extends StatelessWidget {
+  const _SituationStep({
+    required this.emergencyType,
+    required this.situations,
+    required this.onSituationSelected,
+    required this.onSendWithoutDescription,
+  });
+
+  final EmergencyType emergencyType;
+  final List<String> situations;
+  final ValueChanged<String> onSituationSelected;
+  final VoidCallback onSendWithoutDescription;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      key: const ValueKey('situation-step'),
+      padding: const EdgeInsets.fromLTRB(20, 70, 20, 24),
+      child: Column(
+        children: [
+          const Text(
+            'Describe Situation',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 23,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.4,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Select one or skip to send immediately',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _labelForType(emergencyType),
+            style: const TextStyle(
+              color: Color(0xFFD4CFD8),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 24),
+          GridView.builder(
+            itemCount: situations.length,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.65,
+            ),
+            itemBuilder: (context, index) {
+              final situation = situations[index];
+              return _SituationChip(
+                label: situation,
+                onTap: () => onSituationSelected(situation),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: onSendWithoutDescription,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.accentRed,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(54),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Text(
+                'Send Without Description',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SendingStep extends StatelessWidget {
+  const _SendingStep({
+    required this.emergencyType,
+    required this.situation,
+  });
+
+  final EmergencyType emergencyType;
+  final String? situation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      key: const ValueKey('sending-step'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 86,
+              height: 86,
+              child: CircularProgressIndicator(
+                strokeWidth: 4,
+                color: AppTheme.accentRed,
+                backgroundColor: Color(0xFF2A2A2F),
+              ),
+            ),
+            const SizedBox(height: 28),
+            const Text(
+              'Sending Emergency Alert...',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              situation == null
+                  ? '${_labelForType(emergencyType)} report is being sent to responders.'
+                  : '$situation reported under ${_labelForType(emergencyType).toLowerCase()}.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppTheme.textMuted,
+                fontSize: 16,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _PulsingDot(),
+                SizedBox(width: 10),
+                Text(
+                  'Location transmitted',
+                  style: TextStyle(
+                    color: AppTheme.success,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusTag extends StatelessWidget {
+  const _StatusTag({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: AppTheme.success, size: 16),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppTheme.success,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmergencyTypeCard extends StatelessWidget {
+  const _EmergencyTypeCard({
+    required this.title,
+    required this.color,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final Color color;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.24),
+              blurRadius: 22,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.16),
+              ),
+              child: Icon(icon, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SituationChip extends StatelessWidget {
+  const _SituationChip({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF18191F),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF33333B)),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xFFF3EFF4),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot();
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.4, end: 1).animate(_controller),
+      child: const DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppTheme.success,
+          shape: BoxShape.circle,
+        ),
+        child: SizedBox(width: 10, height: 10),
+      ),
+    );
+  }
+}
+
+String _labelForType(EmergencyType type) {
+  switch (type) {
+    case EmergencyType.medical:
+      return 'Medical Emergency';
+    case EmergencyType.safety:
+      return 'Safety/Security';
+    case EmergencyType.fire:
+      return 'Fire Emergency';
+  }
+}

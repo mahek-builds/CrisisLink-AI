@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../services/connectivity_service.dart';
+import 'emergency_type_page.dart';
+import 'offline_emergency_page.dart';
 import '../theme/app_theme.dart';
 import '../widgets/online_chip.dart';
 import '../widgets/sos_emergency_button.dart';
 import '../widgets/staff_access_sheet.dart';
 
 class SosHomePage extends StatefulWidget {
-  const SosHomePage({super.key});
+  const SosHomePage({
+    super.key,
+    required this.connectivityService,
+  });
 
   static const routeName = '/sos';
+
+  final ConnectivityService connectivityService;
 
   @override
   State<SosHomePage> createState() => _SosHomePageState();
@@ -18,8 +26,8 @@ class _SosHomePageState extends State<SosHomePage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
   bool _staffExpanded = false;
-  bool _sosActivated = false;
   bool _isHoldingSos = false;
+  bool _isRoutingFromSos = false;
   StaffRole _selectedRole = StaffRole.responder;
 
   @override
@@ -35,6 +43,38 @@ class _SosHomePageState extends State<SosHomePage>
   void dispose() {
     _pulseController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleSosActivated() async {
+    if (_isRoutingFromSos) {
+      return;
+    }
+
+    setState(() {
+      _isHoldingSos = false;
+      _isRoutingFromSos = true;
+    });
+
+    final isOnline = await widget.connectivityService.isOnline();
+    if (!mounted) {
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => isOnline
+            ? const EmergencyTypePage()
+            : const OfflineEmergencyPage(),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isRoutingFromSos = false;
+    });
   }
 
   @override
@@ -127,7 +167,8 @@ class _SosHomePageState extends State<SosHomePage>
                               const SizedBox(height: 36),
                               SosEmergencyButton(
                                 glowStrength: glowStrength,
-                                activated: _sosActivated,
+                                holdDuration: const Duration(seconds: 10),
+                                activated: _isRoutingFromSos,
                                 onHoldStateChanged: (isHolding) {
                                   if (!mounted) {
                                     return;
@@ -138,33 +179,16 @@ class _SosHomePageState extends State<SosHomePage>
                                   });
                                 },
                                 onActivated: () {
-                                  if (!mounted) {
-                                    return;
-                                  }
-
-                                  setState(() {
-                                    _sosActivated = true;
-                                    _isHoldingSos = false;
-                                  });
-
-                                  ScaffoldMessenger.of(context)
-                                    ..hideCurrentSnackBar()
-                                    ..showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Emergency alert activated. Dispatch has been notified.',
-                                        ),
-                                      ),
-                                    );
+                                  return _handleSosActivated();
                                 },
                               ),
                               const SizedBox(height: 22),
                               Text(
-                                _sosActivated
-                                    ? 'Emergency alert is active. Stay on this screen for updates.'
+                                _isRoutingFromSos
+                                    ? 'Checking network status and preparing the emergency flow.'
                                     : _isHoldingSos
-                                        ? 'Keep pressing until the ring completes to send the alert.'
-                                        : 'Hold for 3 seconds to activate emergency alert',
+                                    ? 'Keep pressing until the ring completes to continue.'
+                                    : 'Hold for 10 seconds to activate emergency alert',
                                 key: const Key('sos-hint-text'),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
