@@ -10,12 +10,16 @@ class StaffAccessSheet extends StatefulWidget {
   const StaffAccessSheet({
     super.key,
     required this.expanded,
+    required this.collapsedHeight,
+    required this.expandedHeight,
     required this.selectedRole,
     required this.onToggle,
     required this.onRoleChanged,
   });
 
   final bool expanded;
+  final double collapsedHeight;
+  final double expandedHeight;
   final StaffRole selectedRole;
   final VoidCallback onToggle;
   final ValueChanged<StaffRole> onRoleChanged;
@@ -84,6 +88,14 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final isExpanded = widget.expanded;
+    final currentHeight =
+        isExpanded ? widget.expandedHeight : widget.collapsedHeight;
+    final contentPadding = EdgeInsets.fromLTRB(
+      18,
+      isExpanded ? 10 : 8,
+      18,
+      isExpanded ? 18 : 12,
+    );
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 220),
@@ -95,10 +107,11 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
           duration: const Duration(milliseconds: 280),
           curve: Curves.easeOutCubic,
           width: double.infinity,
+          height: currentHeight,
           constraints: BoxConstraints(
             maxWidth: 540,
-            minHeight: isExpanded ? 368 : 70,
-            maxHeight: isExpanded ? 368 : 70,
+            minHeight: currentHeight,
+            maxHeight: currentHeight,
           ),
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -126,14 +139,14 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
               child: Material(
                 color: Colors.transparent,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+                  padding: contentPadding,
                   child: Column(
                     children: [
                       GestureDetector(
                         onTap: widget.onToggle,
                         behavior: HitTestBehavior.opaque,
                         child: Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
+                          padding: EdgeInsets.only(bottom: isExpanded ? 10 : 0),
                           child: Column(
                             children: [
                               Container(
@@ -201,12 +214,10 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: IgnorePointer(
-                          ignoring: !isExpanded,
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 180),
-                            opacity: isExpanded ? 1 : 0,
+                      if (isExpanded)
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -229,13 +240,15 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
                                     Expanded(
                                       child: _RoleCard(
                                         selected:
-                                            widget.selectedRole == StaffRole.admin,
+                                            widget.selectedRole ==
+                                            StaffRole.admin,
                                         title: 'Admin',
                                         subtitle: 'Control room',
                                         icon: Icons.manage_accounts_rounded,
                                         activeColor: const Color(0xFF875CFF),
-                                        onTap: () =>
-                                            widget.onRoleChanged(StaffRole.admin),
+                                        onTap: () => widget.onRoleChanged(
+                                          StaffRole.admin,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -313,7 +326,6 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),

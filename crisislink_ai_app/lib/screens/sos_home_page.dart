@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 import '../services/connectivity_service.dart';
 import 'emergency_type_page.dart';
@@ -100,8 +101,13 @@ class _SosHomePageState extends State<SosHomePage>
             child: SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final expandedHeight = constraints.maxHeight * 0.56;
-                  final collapsedHeight = 64.0;
+                  const collapsedHeight = 82.0;
+                  final maxExpandedHeight = math.max(
+                    collapsedHeight,
+                    constraints.maxHeight - 24,
+                  );
+                  final expandedHeight =
+                      math.min(maxExpandedHeight, 430.0);
 
                   return Stack(
                     children: [
@@ -245,6 +251,8 @@ class _SosHomePageState extends State<SosHomePage>
                         bottom: 0,
                         child: StaffAccessSheet(
                           expanded: _staffExpanded,
+                          collapsedHeight: collapsedHeight,
+                          expandedHeight: expandedHeight,
                           selectedRole: _selectedRole,
                           onToggle: () {
                             setState(() {
