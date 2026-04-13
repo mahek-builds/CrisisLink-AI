@@ -12,7 +12,7 @@ def get_active_incidents(db:Session=Depends(get_db)):
         ORDER BY created_at DESC
     """)
     result=db.execute(query).fetchall()
-    return [dict(r.mapping)for r in result]
+    return [dict(r._mapping) for r in result]
 
 @router.get("/{incident_id}")
 def get_incident_details(incident_id:str,db:Session=Depends(get_db)):

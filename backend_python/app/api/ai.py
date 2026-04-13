@@ -4,6 +4,8 @@ from sqlalchemy import text
 from app.db.supabase_client import get_db
 from app.ai.type_prediction import predict_type
 from app.ai.suggestion_engine import get_incident_suggestions
+from app.ai.priority_prediction import predict_priority
+from app.ai.fraud_detection import check_for_fraud
 
 router = APIRouter()
 
@@ -24,6 +26,12 @@ def analyze_incident(incident_id: str, db: Session = Depends(get_db)):
 
     report_list = [r.phone_number for r in reports]
     unique_count = len(set(report_list))
+
+    if not reports:
+        raise HTTPException(
+            status_code=400,
+            detail="No reports found for this incident",
+        )
 
     # AI Analysis Execution
     priority = predict_priority(unique_count)

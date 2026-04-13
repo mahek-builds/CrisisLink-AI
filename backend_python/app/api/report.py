@@ -5,7 +5,7 @@ from sqlalchemy import text
 router=APIRouter()
 @router.get("/incident/{incident_id}")
 def get_reports_by_incidents(incident_id:str,db:Session=Depends(get_db)):
-    query=text(""" Select id,phone_number,report_type,created_atFrom reports WHERE incident_id=:inc_id ORDER BY created_at DESC""")
+    query=text("""SELECT id, phone_number, report_type, created_at FROM reports WHERE incident_id=:inc_id ORDER BY created_at DESC""")
     result=db.execute(query,{"inc_id":incident_id}).fetchall()
     if not result:
         return {"msg": "No reports found for this incident", "data": []}
