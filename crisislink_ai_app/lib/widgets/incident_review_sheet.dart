@@ -190,10 +190,12 @@ class IncidentReviewSheet extends StatelessWidget {
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: analysis.equipment
-                                      .map((item) => _Badge(
-                                            label: item,
-                                            color: const Color(0xFF2D4C9D),
-                                          ))
+                                      .map(
+                                        (item) => _Badge(
+                                          label: item,
+                                          color: const Color(0xFF2D4C9D),
+                                        ),
+                                      )
                                       .toList(),
                                 ),
                               ],
@@ -221,28 +223,19 @@ class IncidentReviewSheet extends StatelessWidget {
       }
     }
 
-    return _IncidentReviewData(
-      details: details,
-      analysis: analysis,
-    );
+    return _IncidentReviewData(details: details, analysis: analysis);
   }
 }
 
 class _IncidentReviewData {
-  const _IncidentReviewData({
-    required this.details,
-    required this.analysis,
-  });
+  const _IncidentReviewData({required this.details, required this.analysis});
 
   final IncidentDetailsResponse details;
   final IncidentAnalysis? analysis;
 }
 
 class _ReviewState extends StatelessWidget {
-  const _ReviewState({
-    required this.title,
-    required this.description,
-  });
+  const _ReviewState({required this.title, required this.description});
 
   final String title;
   final String description;
@@ -256,10 +249,7 @@ class _ReviewState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           Text(
@@ -278,10 +268,7 @@ class _ReviewState extends StatelessWidget {
 }
 
 class _Panel extends StatelessWidget {
-  const _Panel({
-    required this.title,
-    required this.child,
-  });
+  const _Panel({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -301,10 +288,7 @@ class _Panel extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
           child,
@@ -315,10 +299,7 @@ class _Panel extends StatelessWidget {
 }
 
 class _MiniStat extends StatelessWidget {
-  const _MiniStat({
-    required this.label,
-    required this.value,
-  });
+  const _MiniStat({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -336,18 +317,12 @@ class _MiniStat extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -356,10 +331,7 @@ class _MiniStat extends StatelessWidget {
 }
 
 class _Badge extends StatelessWidget {
-  const _Badge({
-    required this.label,
-    required this.color,
-  });
+  const _Badge({required this.label, required this.color});
 
   final String label;
   final Color color;

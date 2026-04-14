@@ -39,21 +39,19 @@ class _SosEmergencyButtonState extends State<SosEmergencyButton>
   @override
   void initState() {
     super.initState();
-    _holdController = AnimationController(
-      vsync: this,
-      duration: widget.holdDuration,
-    )
-      ..addListener(() {
-        widget.onHoldProgressChanged?.call(_holdController.value);
-      })
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed && !_didTrigger) {
-          _didTrigger = true;
-          _isHolding = false;
-          widget.onHoldStateChanged?.call(false);
-          widget.onActivated();
-        }
-      });
+    _holdController =
+        AnimationController(vsync: this, duration: widget.holdDuration)
+          ..addListener(() {
+            widget.onHoldProgressChanged?.call(_holdController.value);
+          })
+          ..addStatusListener((status) {
+            if (status == AnimationStatus.completed && !_didTrigger) {
+              _didTrigger = true;
+              _isHolding = false;
+              widget.onHoldStateChanged?.call(false);
+              widget.onActivated();
+            }
+          });
   }
 
   @override
@@ -122,7 +120,8 @@ class _SosEmergencyButtonState extends State<SosEmergencyButton>
                     boxShadow: [
                       BoxShadow(
                         color: AppTheme.accentRed.withValues(
-                          alpha: 0.25 +
+                          alpha:
+                              0.25 +
                               (widget.glowStrength * 0.25) +
                               (holdProgress * 0.2),
                         ),
@@ -155,9 +154,9 @@ class _SosEmergencyButtonState extends State<SosEmergencyButton>
                             : const [Color(0xFFFF080E), Color(0xFFD2000B)],
                       ),
                       border: Border.all(
-                        color: const Color(0xFFFF3C3C).withValues(
-                          alpha: 0.5 + (holdProgress * 0.3),
-                        ),
+                        color: const Color(
+                          0xFFFF3C3C,
+                        ).withValues(alpha: 0.5 + (holdProgress * 0.3)),
                         width: 2,
                       ),
                     ),
@@ -193,8 +192,8 @@ class _SosEmergencyButtonState extends State<SosEmergencyButton>
                           widget.activated
                               ? 'Emergency Alert Sent'
                               : _isHolding
-                                  ? 'Keep holding...'
-                                  : 'Hold for $_holdSeconds seconds',
+                              ? 'Keep holding...'
+                              : 'Hold for $_holdSeconds seconds',
                           key: const Key('sos-button-status'),
                           style: const TextStyle(
                             fontSize: 17,

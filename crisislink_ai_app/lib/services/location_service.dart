@@ -1,10 +1,7 @@
 import 'package:geolocator/geolocator.dart';
 
 class AppLocation {
-  const AppLocation({
-    required this.latitude,
-    required this.longitude,
-  });
+  const AppLocation({required this.latitude, required this.longitude});
 
   final double latitude;
   final double longitude;
@@ -41,9 +38,7 @@ class DefaultLocationService implements LocationService {
     }
 
     final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-      ),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
 
     return AppLocation(

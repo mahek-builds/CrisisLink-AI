@@ -3,6 +3,7 @@ import 'package:crisislink_ai_app/screens/launch_screen.dart';
 import 'package:crisislink_ai_app/services/connectivity_service.dart';
 import 'package:crisislink_ai_app/services/location_service.dart';
 import 'package:crisislink_ai_app/services/sos_api_service.dart';
+import 'package:crisislink_ai_app/services/user_session_service.dart';
 import 'package:crisislink_ai_app/widgets/sos_emergency_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,7 +79,9 @@ class FakeSosApiService extends SosApiService {
   }
 
   @override
-  Future<IncidentDetailsResponse> fetchIncidentDetails(String incidentId) async {
+  Future<IncidentDetailsResponse> fetchIncidentDetails(
+    String incidentId,
+  ) async {
     return IncidentDetailsResponse(
       details: IncidentSummary(
         id: incidentId,
@@ -136,23 +139,50 @@ class FakeSosApiService extends SosApiService {
 
   @override
   Future<AssignmentResponse> releaseResponder(String responderId) async {
-    return AssignmentResponse(
-      status: 'released',
-      responderId: responderId,
+    return AssignmentResponse(status: 'released', responderId: responderId);
+  }
+}
+
+class FakeUserSessionService extends UserSessionService {
+  FakeUserSessionService({UserProfile? initialProfile})
+    : _profile = initialProfile;
+
+  UserProfile? _profile;
+
+  @override
+  Future<UserProfile?> fetchProfile() async => _profile;
+
+  @override
+  Future<UserProfile> signIn({required String phoneNumber}) async {
+    final profile = UserProfile(
+      phoneNumber: phoneNumber,
+      signedInAt: DateTime.utc(2026, 4, 14, 12),
     );
+    _profile = profile;
+    return profile;
+  }
+
+  @override
+  Future<void> clearProfile() async {
+    _profile = null;
   }
 }
 
 void main() {
-  Widget buildApp({required bool online}) {
+  Widget buildApp({required bool online, UserProfile? initialProfile}) {
     return CrisisLinkApp(
       connectivityService: FakeConnectivityService(online),
       locationService: const FakeLocationService(),
       sosApiService: const FakeSosApiService(),
+      userSessionService: FakeUserSessionService(
+        initialProfile: initialProfile,
+      ),
     );
   }
 
-  testWidgets('launch screen redirects to SOS home screen', (tester) async {
+  testWidgets('launch screen redirects first-time users to sign in', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp(online: true));
 
     expect(find.text('EMERGENCY NEURAL NETWORK V4.0'), findsOneWidget);
@@ -163,13 +193,40 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
+    expect(find.text('One-time Sign In'), findsOneWidget);
+    expect(find.text('Continue to SOS'), findsOneWidget);
+  });
+
+  testWidgets('saved users skip sign in and land on SOS home screen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildApp(
+        online: true,
+        initialProfile: UserProfile(
+          phoneNumber: '9999999999',
+          signedInAt: DateTime.utc(2026, 4, 14, 12),
+        ),
+      ),
+    );
+    await tester.pump(LaunchScreen.displayDuration);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
     expect(find.text('CrisisLink-AI'), findsOneWidget);
-    expect(find.text('SOS'), findsOneWidget);
-    expect(find.text('Staff Access'), findsOneWidget);
+    expect(find.text('Signed in as 9999999999'), findsOneWidget);
   });
 
   testWidgets('staff access expands on the SOS screen', (tester) async {
-    await tester.pumpWidget(buildApp(online: true));
+    await tester.pumpWidget(
+      buildApp(
+        online: true,
+        initialProfile: UserProfile(
+          phoneNumber: '9999999999',
+          signedInAt: DateTime.utc(2026, 4, 14, 12),
+        ),
+      ),
+    );
     await tester.pump(LaunchScreen.displayDuration);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -183,8 +240,33 @@ void main() {
     expect(find.text('Login as Responder'), findsOneWidget);
   });
 
-  testWidgets('online SOS redirects to live emergency flow', (tester) async {
+  testWidgets('sign in captures phone number before SOS flow', (tester) async {
     await tester.pumpWidget(buildApp(online: true));
+    await tester.pump(LaunchScreen.displayDuration);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.enterText(find.byType(EditableText).first, '9999999999');
+    await tester.ensureVisible(find.text('Continue to SOS'));
+    await tester.pump();
+    await tester.tap(find.text('Continue to SOS'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('CrisisLink-AI'), findsOneWidget);
+    expect(find.text('Signed in as 9999999999'), findsOneWidget);
+  });
+
+  testWidgets('online SOS redirects to live emergency flow', (tester) async {
+    await tester.pumpWidget(
+      buildApp(
+        online: true,
+        initialProfile: UserProfile(
+          phoneNumber: '9999999999',
+          signedInAt: DateTime.utc(2026, 4, 14, 12),
+        ),
+      ),
+    );
     await tester.pump(LaunchScreen.displayDuration);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -192,8 +274,7 @@ void main() {
     final buttonFinder = find.byType(SosEmergencyButton);
     expect(buttonFinder, findsOneWidget);
 
-    final shortHold =
-        await tester.startGesture(tester.getCenter(buttonFinder));
+    final shortHold = await tester.startGesture(tester.getCenter(buttonFinder));
     await tester.pump();
     await tester.pump(const Duration(seconds: 2));
     expect(
@@ -226,13 +307,13 @@ void main() {
 
     expect(find.text('Describe Situation'), findsOneWidget);
     expect(
-      find.text('Add your phone number and confirm live location before sending.'),
+      find.text(
+        'Your signed-in phone number and live location will be attached before sending.',
+      ),
       findsOneWidget,
     );
+    expect(find.text('9999999999'), findsOneWidget);
     expect(find.text('Send Live Alert'), findsOneWidget);
-
-    await tester.enterText(find.byType(EditableText).first, '9999999999');
-    await tester.pump();
     await tester.ensureVisible(find.text('Send Live Alert'));
     await tester.pump();
     await tester.tap(find.text('Send Live Alert'));
@@ -242,8 +323,18 @@ void main() {
     expect(find.text('Transmitting live backend request'), findsOneWidget);
   });
 
-  testWidgets('offline SOS redirects to offline emergency page', (tester) async {
-    await tester.pumpWidget(buildApp(online: false));
+  testWidgets('offline SOS redirects to offline emergency page', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildApp(
+        online: false,
+        initialProfile: UserProfile(
+          phoneNumber: '9999999999',
+          signedInAt: DateTime.utc(2026, 4, 14, 12),
+        ),
+      ),
+    );
     await tester.pump(LaunchScreen.displayDuration);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -262,7 +353,15 @@ void main() {
   });
 
   testWidgets('admin login opens admin dashboard', (tester) async {
-    await tester.pumpWidget(buildApp(online: true));
+    await tester.pumpWidget(
+      buildApp(
+        online: true,
+        initialProfile: UserProfile(
+          phoneNumber: '9999999999',
+          signedInAt: DateTime.utc(2026, 4, 14, 12),
+        ),
+      ),
+    );
     await tester.pump(LaunchScreen.displayDuration);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -285,7 +384,15 @@ void main() {
   });
 
   testWidgets('responder login opens responder dashboard', (tester) async {
-    await tester.pumpWidget(buildApp(online: true));
+    await tester.pumpWidget(
+      buildApp(
+        online: true,
+        initialProfile: UserProfile(
+          phoneNumber: '9999999999',
+          signedInAt: DateTime.utc(2026, 4, 14, 12),
+        ),
+      ),
+    );
     await tester.pump(LaunchScreen.displayDuration);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));

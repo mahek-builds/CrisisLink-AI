@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../services/connectivity_service.dart';
 import '../services/location_service.dart';
 import '../services/sos_api_service.dart';
+import '../services/user_session_service.dart';
 import '../theme/app_theme.dart';
 import 'sos_home_page.dart';
+import 'user_sign_in_page.dart';
 
 class LaunchScreen extends StatefulWidget {
   const LaunchScreen({
@@ -12,6 +14,7 @@ class LaunchScreen extends StatefulWidget {
     required this.connectivityService,
     required this.locationService,
     required this.sosApiService,
+    required this.userSessionService,
   });
 
   static const Duration displayDuration = Duration(seconds: 5);
@@ -19,6 +22,7 @@ class LaunchScreen extends StatefulWidget {
   final ConnectivityService connectivityService;
   final LocationService locationService;
   final SosApiService sosApiService;
+  final UserSessionService userSessionService;
 
   @override
   State<LaunchScreen> createState() => _LaunchScreenState();
@@ -28,6 +32,7 @@ class _LaunchScreenState extends State<LaunchScreen>
     with TickerProviderStateMixin {
   late final AnimationController _progressController;
   late final AnimationController _pulseController;
+  late final Future<UserProfile?> _profileFuture;
 
   @override
   void initState() {
@@ -42,11 +47,13 @@ class _LaunchScreenState extends State<LaunchScreen>
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
 
-    Future<void>.delayed(LaunchScreen.displayDuration, _goToSosScreen);
-
+    _profileFuture = widget.userSessionService.fetchProfile();
+    Future<void>.delayed(LaunchScreen.displayDuration, _goToNextScreen);
   }
 
-  void _goToSosScreen() {
+  Future<void> _goToNextScreen() async {
+    final profile = await _profileFuture;
+
     if (!mounted) {
       return;
     }
@@ -54,12 +61,19 @@ class _LaunchScreenState extends State<LaunchScreen>
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 450),
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            SosHomePage(
-              connectivityService: widget.connectivityService,
-              locationService: widget.locationService,
-              sosApiService: widget.sosApiService,
-            ),
+        pageBuilder: (context, animation, secondaryAnimation) => profile == null
+            ? UserSignInPage(
+                connectivityService: widget.connectivityService,
+                locationService: widget.locationService,
+                sosApiService: widget.sosApiService,
+                userSessionService: widget.userSessionService,
+              )
+            : SosHomePage(
+                connectivityService: widget.connectivityService,
+                locationService: widget.locationService,
+                sosApiService: widget.sosApiService,
+                userProfile: profile,
+              ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(
@@ -86,8 +100,9 @@ class _LaunchScreenState extends State<LaunchScreen>
       body: AnimatedBuilder(
         animation: Listenable.merge([_progressController, _pulseController]),
         builder: (context, child) {
-          final progress =
-              Curves.easeOutCubic.transform(_progressController.value);
+          final progress = Curves.easeOutCubic.transform(
+            _progressController.value,
+          );
           final pulse = 0.55 + (_pulseController.value * 0.45);
 
           return DecoratedBox(
@@ -186,11 +201,7 @@ class _LogoMark extends StatelessWidget {
         ],
       ),
       child: const Center(
-        child: Icon(
-          Icons.shield_rounded,
-          color: Colors.white,
-          size: 76,
-        ),
+        child: Icon(Icons.shield_rounded, color: Colors.white, size: 76),
       ),
     );
   }
@@ -261,8 +272,9 @@ class _ProgressSection extends StatelessWidget {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFF2B23)
-                                .withValues(alpha: 0.45 * pulse),
+                            color: const Color(
+                              0xFFFF2B23,
+                            ).withValues(alpha: 0.45 * pulse),
                             blurRadius: 16,
                             spreadRadius: 0.5,
                           ),

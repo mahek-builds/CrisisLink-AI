@@ -52,8 +52,7 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
         ? id == 'admin' && password == 'admin'
         : id == 'resp' && password == 'resp';
 
-    final messenger = ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar();
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
 
     if (id.isEmpty || password.isEmpty) {
       messenger.showSnackBar(
@@ -92,8 +91,9 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final isExpanded = widget.expanded;
-    final currentHeight =
-        isExpanded ? widget.expandedHeight : widget.collapsedHeight;
+    final currentHeight = isExpanded
+        ? widget.expandedHeight
+        : widget.collapsedHeight;
     final contentPadding = EdgeInsets.fromLTRB(
       18,
       isExpanded ? 10 : 8,
@@ -229,7 +229,8 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
                                   children: [
                                     Expanded(
                                       child: _RoleCard(
-                                        selected: widget.selectedRole ==
+                                        selected:
+                                            widget.selectedRole ==
                                             StaffRole.responder,
                                         title: 'Responder',
                                         subtitle: 'Dispatch access',
@@ -397,18 +398,12 @@ class _RoleCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: const TextStyle(
-                color: AppTheme.textMuted,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
             ),
           ],
         ),

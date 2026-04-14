@@ -5,10 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/incident_review_sheet.dart';
 
 class AdminDashboardPage extends StatefulWidget {
-  const AdminDashboardPage({
-    super.key,
-    required this.sosApiService,
-  });
+  const AdminDashboardPage({super.key, required this.sosApiService});
 
   final SosApiService sosApiService;
 
@@ -137,10 +134,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0D1118),
-              AppTheme.background,
-            ],
+            colors: [Color(0xFF0D1118), AppTheme.background],
           ),
         ),
         child: SafeArea(
@@ -154,7 +148,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   children: [
                     TextButton.icon(
                       onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 16,
+                      ),
                       label: const Text('Back'),
                     ),
                     const Spacer(),
@@ -176,24 +173,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 const SizedBox(height: 8),
                 const Text(
                   'Live backend data from the emergency operations API.',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 15,
-                  ),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 15),
                 ),
                 const SizedBox(height: 20),
                 if (_isLoading && _stats == null)
                   const Padding(
                     padding: EdgeInsets.only(top: 100),
                     child: Center(
-                      child: CircularProgressIndicator(color: AppTheme.accentRed),
+                      child: CircularProgressIndicator(
+                        color: AppTheme.accentRed,
+                      ),
                     ),
                   )
                 else if (_error != null)
-                  _MessageCard(
-                    title: 'Dashboard unavailable',
-                    message: _error!,
-                  )
+                  _MessageCard(title: 'Dashboard unavailable', message: _error!)
                 else ...[
                   Row(
                     children: [
@@ -225,10 +218,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   const SizedBox(height: 22),
                   const Text(
                     'Live Incidents',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 12),
                   if (_incidents.isEmpty)
@@ -285,10 +275,7 @@ class _StatCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
           ),
           const SizedBox(height: 10),
           Text(
@@ -354,27 +341,18 @@ class _IncidentCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             '${incident.reporterCount} reporter(s) | ${_displayStatus(incident.status)}',
-            style: const TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
           ),
           const SizedBox(height: 8),
           Text(
             'Lat ${incident.latitude.toStringAsFixed(5)} | Lng ${incident.longitude.toStringAsFixed(5)}',
-            style: const TextStyle(
-              color: Color(0xFFD8D4DD),
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Color(0xFFD8D4DD), fontSize: 14),
           ),
           if (incident.createdAt != null) ...[
             const SizedBox(height: 8),
             Text(
               'Created ${_compactDate(incident.createdAt!)}',
-              style: const TextStyle(
-                color: AppTheme.textMuted,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
             ),
           ],
           const SizedBox(height: 14),
@@ -385,7 +363,9 @@ class _IncidentCard extends StatelessWidget {
                   onPressed: onReview,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.12),
+                    ),
                     minimumSize: const Size.fromHeight(48),
                   ),
                   child: const Text('Review'),
@@ -420,10 +400,7 @@ class _IncidentCard extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({
-    required this.label,
-    required this.color,
-  });
+  const _Pill({required this.label, required this.color});
 
   final String label;
   final Color color;
@@ -450,10 +427,7 @@ class _Pill extends StatelessWidget {
 }
 
 class _MessageCard extends StatelessWidget {
-  const _MessageCard({
-    required this.title,
-    required this.message,
-  });
+  const _MessageCard({required this.title, required this.message});
 
   final String title;
   final String message;
@@ -472,10 +446,7 @@ class _MessageCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(

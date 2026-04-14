@@ -15,11 +15,7 @@ class OfflineEmergencyPage extends StatelessWidget {
           gradient: RadialGradient(
             center: Alignment(0, -0.05),
             radius: 1.05,
-            colors: [
-              Color(0xFF2A090A),
-              Color(0xFF120809),
-              AppTheme.background,
-            ],
+            colors: [Color(0xFF2A090A), Color(0xFF120809), AppTheme.background],
           ),
         ),
         child: SafeArea(
@@ -43,10 +39,16 @@ class OfflineEmergencyPage extends StatelessWidget {
                             vertical: 6,
                           ),
                         ),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 16,
+                        ),
                         label: const Text(
                           'Exit',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                       const Spacer(),

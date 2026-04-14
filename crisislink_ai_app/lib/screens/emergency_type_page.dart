@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/location_service.dart';
 import '../services/sos_api_service.dart';
+import '../services/user_session_service.dart';
 import '../theme/app_theme.dart';
 
 enum EmergencyType { medical, safety, fire }
@@ -13,12 +14,14 @@ class EmergencyTypePage extends StatefulWidget {
     super.key,
     required this.locationService,
     required this.sosApiService,
+    required this.userProfile,
   });
 
   static const routeName = '/emergency-type';
 
   final LocationService locationService;
   final SosApiService sosApiService;
+  final UserProfile userProfile;
 
   @override
   State<EmergencyTypePage> createState() => _EmergencyTypePageState();
@@ -46,14 +49,11 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
     ],
   };
 
-  final TextEditingController _phoneController = TextEditingController();
-
   EmergencyFlowStep _step = EmergencyFlowStep.type;
   EmergencyType? _selectedType;
   String? _selectedSituation;
   AppLocation? _currentPosition;
   String? _locationError;
-  String? _phoneError;
   bool _isFetchingLocation = false;
   bool _isSubmitting = false;
 
@@ -61,12 +61,6 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
   void initState() {
     super.initState();
     _loadLocation();
-  }
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
   }
 
   void _selectType(EmergencyType type) {
@@ -125,14 +119,6 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
       return;
     }
 
-    final phoneError = _validatePhoneNumber(_phoneController.text);
-    if (phoneError != null) {
-      setState(() {
-        _phoneError = phoneError;
-      });
-      return;
-    }
-
     final position = _currentPosition;
     if (position == null) {
       setState(() {
@@ -144,10 +130,7 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
       return;
     }
 
-    final normalizedPhone = _normalizePhoneNumber(_phoneController.text);
-
     setState(() {
-      _phoneError = null;
       _selectedSituation = situation;
       _isSubmitting = true;
       _step = EmergencyFlowStep.sending;
@@ -158,7 +141,7 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
         SosCreateRequest(
           latitude: position.latitude,
           longitude: position.longitude,
-          phoneNumber: normalizedPhone,
+          phoneNumber: widget.userProfile.phoneNumber,
           type: _apiTypeFor(type),
         ),
       );
@@ -199,9 +182,7 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handleExit() {
@@ -231,11 +212,7 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
           gradient: RadialGradient(
             center: Alignment(0, -0.05),
             radius: 1.05,
-            colors: [
-              Color(0xFF210C0D),
-              Color(0xFF0C090A),
-              AppTheme.background,
-            ],
+            colors: [Color(0xFF210C0D), Color(0xFF0C090A), AppTheme.background],
           ),
         ),
         child: SafeArea(
@@ -254,10 +231,16 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
                           vertical: 6,
                         ),
                       ),
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 16,
+                      ),
                       label: const Text(
                         'Exit',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -290,35 +273,25 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
                   switchOutCurve: Curves.easeOutCubic,
                   child: switch (_step) {
                     EmergencyFlowStep.type => _TypeStep(
-                        onTypeSelected: _selectType,
-                      ),
+                      onTypeSelected: _selectType,
+                    ),
                     EmergencyFlowStep.situation => _SituationStep(
-                        emergencyType: _selectedType!,
-                        situations: _situationChips[_selectedType!]!,
-                        phoneController: _phoneController,
-                        phoneErrorText: _phoneError,
-                        isFetchingLocation: _isFetchingLocation,
-                        locationLabel: _locationLabel,
-                        locationError: _locationError,
-                        isSubmitting: _isSubmitting,
-                        onPhoneChanged: () {
-                          if (_phoneError == null) {
-                            return;
-                          }
-
-                          setState(() {
-                            _phoneError = null;
-                          });
-                        },
-                        onRefreshLocation: _loadLocation,
-                        onSendWithoutDescription: () => _sendReport(),
-                        onSituationSelected: (situation) =>
-                            _sendReport(situation: situation),
-                      ),
+                      emergencyType: _selectedType!,
+                      situations: _situationChips[_selectedType!]!,
+                      phoneNumber: widget.userProfile.phoneNumber,
+                      isFetchingLocation: _isFetchingLocation,
+                      locationLabel: _locationLabel,
+                      locationError: _locationError,
+                      isSubmitting: _isSubmitting,
+                      onRefreshLocation: _loadLocation,
+                      onSendWithoutDescription: () => _sendReport(),
+                      onSituationSelected: (situation) =>
+                          _sendReport(situation: situation),
+                    ),
                     EmergencyFlowStep.sending => _SendingStep(
-                        emergencyType: _selectedType!,
-                        situation: _selectedSituation,
-                      ),
+                      emergencyType: _selectedType!,
+                      situation: _selectedSituation,
+                    ),
                   },
                 ),
               ),
@@ -371,10 +344,7 @@ class _TypeStep extends StatelessWidget {
                 Text(
                   'Choose the type of emergency',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 16),
                 ),
               ],
             ),
@@ -410,13 +380,11 @@ class _SituationStep extends StatelessWidget {
   const _SituationStep({
     required this.emergencyType,
     required this.situations,
-    required this.phoneController,
-    required this.phoneErrorText,
+    required this.phoneNumber,
     required this.isFetchingLocation,
     required this.locationLabel,
     required this.locationError,
     required this.isSubmitting,
-    required this.onPhoneChanged,
     required this.onRefreshLocation,
     required this.onSituationSelected,
     required this.onSendWithoutDescription,
@@ -424,13 +392,11 @@ class _SituationStep extends StatelessWidget {
 
   final EmergencyType emergencyType;
   final List<String> situations;
-  final TextEditingController phoneController;
-  final String? phoneErrorText;
+  final String phoneNumber;
   final bool isFetchingLocation;
   final String locationLabel;
   final String? locationError;
   final bool isSubmitting;
-  final VoidCallback onPhoneChanged;
   final Future<void> Function() onRefreshLocation;
   final ValueChanged<String> onSituationSelected;
   final VoidCallback onSendWithoutDescription;
@@ -458,12 +424,9 @@ class _SituationStep extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Add your phone number and confirm live location before sending.',
+            'Your signed-in phone number and live location will be attached before sending.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: AppTheme.textMuted, fontSize: 16),
           ),
           const SizedBox(height: 12),
           Text(
@@ -487,41 +450,42 @@ class _SituationStep extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Phone Number',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  'Signed-in Phone Number',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: phoneController,
-                  enabled: !isSubmitting,
-                  keyboardType: TextInputType.phone,
-                  onChanged: (_) => onPhoneChanged(),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Enter your phone number',
-                    hintStyle: const TextStyle(color: Color(0xFF7D7984)),
-                    errorText: phoneErrorText,
-                    filled: true,
-                    fillColor: const Color(0xFF111216),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 15,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111216),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.08),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.phone_android_rounded,
                         color: AppTheme.accentRed,
+                        size: 18,
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          phoneNumber,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -534,9 +498,7 @@ class _SituationStep extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF17181E),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: locationColor.withValues(alpha: 0.25),
-              ),
+              border: Border.all(color: locationColor.withValues(alpha: 0.25)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -562,7 +524,9 @@ class _SituationStep extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        locationReady ? 'Live Location Ready' : 'Live Location Needed',
+                        locationReady
+                            ? 'Live Location Ready'
+                            : 'Live Location Needed',
                         style: TextStyle(
                           color: locationColor,
                           fontSize: 15,
@@ -615,7 +579,9 @@ class _SituationStep extends StatelessWidget {
               final situation = situations[index];
               return _SituationChip(
                 label: situation,
-                onTap: isSubmitting ? null : () => onSituationSelected(situation),
+                onTap: isSubmitting
+                    ? null
+                    : () => onSituationSelected(situation),
               );
             },
           ),
@@ -627,7 +593,9 @@ class _SituationStep extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.accentRed,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: AppTheme.accentRed.withValues(alpha: 0.4),
+                disabledBackgroundColor: AppTheme.accentRed.withValues(
+                  alpha: 0.4,
+                ),
                 minimumSize: const Size.fromHeight(54),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -646,10 +614,7 @@ class _SituationStep extends StatelessWidget {
 }
 
 class _SendingStep extends StatelessWidget {
-  const _SendingStep({
-    required this.emergencyType,
-    required this.situation,
-  });
+  const _SendingStep({required this.emergencyType, required this.situation});
 
   final EmergencyType emergencyType;
   final String? situation;
@@ -810,10 +775,7 @@ class _EmergencyTypeCard extends StatelessWidget {
 }
 
 class _SituationChip extends StatelessWidget {
-  const _SituationChip({
-    required this.label,
-    required this.onTap,
-  });
+  const _SituationChip({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback? onTap;
@@ -908,29 +870,4 @@ String _apiTypeFor(EmergencyType type) {
     case EmergencyType.fire:
       return 'fire';
   }
-}
-
-String _normalizePhoneNumber(String input) {
-  final trimmed = input.trim();
-  final hasLeadingPlus = trimmed.startsWith('+');
-  final digitsOnly = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
-
-  if (digitsOnly.isEmpty) {
-    return '';
-  }
-
-  return hasLeadingPlus ? '+$digitsOnly' : digitsOnly;
-}
-
-String? _validatePhoneNumber(String input) {
-  final normalized = _normalizePhoneNumber(input);
-  if (normalized.isEmpty) {
-    return 'Phone number is required to submit the alert.';
-  }
-
-  if (!RegExp(r'^\+?\d{7,15}$').hasMatch(normalized)) {
-    return 'Enter a valid phone number before sending.';
-  }
-
-  return null;
 }

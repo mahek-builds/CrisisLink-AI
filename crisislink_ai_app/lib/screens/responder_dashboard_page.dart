@@ -29,8 +29,9 @@ class _ResponderDashboardPageState extends State<ResponderDashboardPage> {
   @override
   void initState() {
     super.initState();
-    _responderIdController =
-        TextEditingController(text: widget.initialResponderId);
+    _responderIdController = TextEditingController(
+      text: widget.initialResponderId,
+    );
     _loadIncidents();
   }
 
@@ -195,10 +196,7 @@ class _ResponderDashboardPageState extends State<ResponderDashboardPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF101521),
-              AppTheme.background,
-            ],
+            colors: [Color(0xFF101521), AppTheme.background],
           ),
         ),
         child: SafeArea(
@@ -212,7 +210,10 @@ class _ResponderDashboardPageState extends State<ResponderDashboardPage> {
                   children: [
                     TextButton.icon(
                       onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 16,
+                      ),
                       label: const Text('Back'),
                     ),
                     const Spacer(),
@@ -234,10 +235,7 @@ class _ResponderDashboardPageState extends State<ResponderDashboardPage> {
                 const SizedBox(height: 8),
                 const Text(
                   'Use a live responder ID to claim or release incidents from the backend.',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 15,
-                  ),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 15),
                 ),
                 const SizedBox(height: 20),
                 Container(
@@ -245,7 +243,9 @@ class _ResponderDashboardPageState extends State<ResponderDashboardPage> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF121821),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,7 +277,9 @@ class _ResponderDashboardPageState extends State<ResponderDashboardPage> {
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Text('Release Responder'),
                         ),
@@ -288,24 +290,24 @@ class _ResponderDashboardPageState extends State<ResponderDashboardPage> {
                 const SizedBox(height: 22),
                 const Text(
                   'Active Incidents',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 12),
                 if (_isLoading && _incidents.isEmpty)
                   const Padding(
                     padding: EdgeInsets.only(top: 100),
                     child: Center(
-                      child: CircularProgressIndicator(color: AppTheme.accentRed),
+                      child: CircularProgressIndicator(
+                        color: AppTheme.accentRed,
+                      ),
                     ),
                   )
                 else if (_error != null)
                   _ResponderMessageCard(message: _error!)
                 else if (_incidents.isEmpty)
                   const _ResponderMessageCard(
-                    message: 'No active incidents are waiting for assignment right now.',
+                    message:
+                        'No active incidents are waiting for assignment right now.',
                   )
                 else
                   ..._incidents.map(
@@ -373,27 +375,18 @@ class _ResponderIncidentCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             '${incident.reporterCount} reporter(s)',
-            style: const TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
           ),
           const SizedBox(height: 8),
           Text(
             'Lat ${incident.latitude.toStringAsFixed(5)} | Lng ${incident.longitude.toStringAsFixed(5)}',
-            style: const TextStyle(
-              color: Color(0xFFD8D4DD),
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Color(0xFFD8D4DD), fontSize: 14),
           ),
           if (incident.createdAt != null) ...[
             const SizedBox(height: 8),
             Text(
               'Reported ${_responderDate(incident.createdAt!)}',
-              style: const TextStyle(
-                color: AppTheme.textMuted,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
             ),
           ],
           const SizedBox(height: 14),
@@ -404,7 +397,9 @@ class _ResponderIncidentCard extends StatelessWidget {
                   onPressed: onReview,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.12),
+                    ),
                     minimumSize: const Size.fromHeight(48),
                   ),
                   child: const Text('Inspect'),
@@ -439,9 +434,7 @@ class _ResponderIncidentCard extends StatelessWidget {
 }
 
 class _ResponderMessageCard extends StatelessWidget {
-  const _ResponderMessageCard({
-    required this.message,
-  });
+  const _ResponderMessageCard({required this.message});
 
   final String message;
 
@@ -467,10 +460,7 @@ class _ResponderMessageCard extends StatelessWidget {
 }
 
 class _ResponderPill extends StatelessWidget {
-  const _ResponderPill({
-    required this.label,
-    required this.color,
-  });
+  const _ResponderPill({required this.label, required this.color});
 
   final String label;
   final Color color;

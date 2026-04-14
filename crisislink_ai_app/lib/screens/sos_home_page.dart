@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import '../services/connectivity_service.dart';
 import '../services/location_service.dart';
 import '../services/sos_api_service.dart';
+import '../services/user_session_service.dart';
 import 'admin_dashboard_page.dart';
 import 'emergency_type_page.dart';
 import 'offline_emergency_page.dart';
@@ -19,6 +20,7 @@ class SosHomePage extends StatefulWidget {
     required this.connectivityService,
     required this.locationService,
     required this.sosApiService,
+    required this.userProfile,
   });
 
   static const routeName = '/sos';
@@ -26,6 +28,7 @@ class SosHomePage extends StatefulWidget {
   final ConnectivityService connectivityService;
   final LocationService locationService;
   final SosApiService sosApiService;
+  final UserProfile userProfile;
 
   @override
   State<SosHomePage> createState() => _SosHomePageState();
@@ -75,6 +78,7 @@ class _SosHomePageState extends State<SosHomePage>
             ? EmergencyTypePage(
                 locationService: widget.locationService,
                 sosApiService: widget.sosApiService,
+                userProfile: widget.userProfile,
               )
             : const OfflineEmergencyPage(),
       ),
@@ -89,19 +93,14 @@ class _SosHomePageState extends State<SosHomePage>
     });
   }
 
-  Future<void> _handleStaffAuthenticated(
-    StaffRole role,
-    String staffId,
-  ) async {
+  Future<void> _handleStaffAuthenticated(StaffRole role, String staffId) async {
     setState(() {
       _staffExpanded = false;
     });
 
     final route = MaterialPageRoute<void>(
       builder: (_) => role == StaffRole.admin
-          ? AdminDashboardPage(
-              sosApiService: widget.sosApiService,
-            )
+          ? AdminDashboardPage(sosApiService: widget.sosApiService)
           : ResponderDashboardPage(
               sosApiService: widget.sosApiService,
               initialResponderId: staffId,
@@ -139,8 +138,7 @@ class _SosHomePageState extends State<SosHomePage>
                     collapsedHeight,
                     constraints.maxHeight - 24,
                   );
-                  final expandedHeight =
-                      math.min(maxExpandedHeight, 430.0);
+                  final expandedHeight = math.min(maxExpandedHeight, 430.0);
 
                   return Stack(
                     children: [
@@ -152,8 +150,9 @@ class _SosHomePageState extends State<SosHomePage>
                                 center: const Alignment(0, 0.08),
                                 radius: 0.55,
                                 colors: [
-                                  AppTheme.accentRed
-                                      .withValues(alpha: 0.2 * glowStrength),
+                                  AppTheme.accentRed.withValues(
+                                    alpha: 0.2 * glowStrength,
+                                  ),
                                   Colors.transparent,
                                 ],
                               ),
@@ -172,7 +171,8 @@ class _SosHomePageState extends State<SosHomePage>
                         ),
                         child: ConstrainedBox(
                           constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight -
+                            minHeight:
+                                constraints.maxHeight -
                                 ((_staffExpanded
                                         ? expandedHeight
                                         : collapsedHeight) +
@@ -201,6 +201,29 @@ class _SosHomePageState extends State<SosHomePage>
                                   color: AppTheme.textMuted,
                                   fontSize: 15,
                                   letterSpacing: 0.8,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF17181E),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.08),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Signed in as ${widget.userProfile.phoneNumber}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Color(0xFFE3DFE7),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 36),

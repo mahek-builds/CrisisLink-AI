@@ -12,10 +12,7 @@ class SosApiService {
   Future<SosSubmissionResponse> createSosReport(
     SosCreateRequest request,
   ) async {
-    final payload = await _post(
-      '/api/sos/create',
-      body: request.toJson(),
-    );
+    final payload = await _post('/api/sos/create', body: request.toJson());
 
     return SosSubmissionResponse.fromJson(payload);
   }
@@ -35,7 +32,9 @@ class SosApiService {
     return payload.map(IncidentSummary.fromJson).toList();
   }
 
-  Future<IncidentDetailsResponse> fetchIncidentDetails(String incidentId) async {
+  Future<IncidentDetailsResponse> fetchIncidentDetails(
+    String incidentId,
+  ) async {
     final payload = await _get('/api/incidents/$incidentId');
     return IncidentDetailsResponse.fromJson(payload);
   }
@@ -56,10 +55,7 @@ class SosApiService {
   }) async {
     final payload = await _post(
       '/api/assign/to-incident',
-      body: {
-        'responder_id': responderId,
-        'incident_id': incidentId,
-      },
+      body: {'responder_id': responderId, 'incident_id': incidentId},
     );
 
     return AssignmentResponse.fromJson(payload);
@@ -86,9 +82,7 @@ class SosApiService {
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl$path'),
-      headers: const {
-        'Content-Type': 'application/json',
-      },
+      headers: const {'Content-Type': 'application/json'},
       body: body == null ? null : jsonEncode(body),
     );
 
@@ -102,7 +96,8 @@ class SosApiService {
     }
 
     throw SosApiException(
-      message: _extractErrorMessage(payload) ??
+      message:
+          _extractErrorMessage(payload) ??
           'Unable to complete the request right now.',
       statusCode: response.statusCode,
     );
@@ -126,7 +121,8 @@ class SosApiService {
         : <String, dynamic>{};
 
     throw SosApiException(
-      message: _extractErrorMessage(errorPayload) ??
+      message:
+          _extractErrorMessage(errorPayload) ??
           'Unable to complete the request right now.',
       statusCode: response.statusCode,
     );
@@ -271,10 +267,7 @@ class IncidentSummary {
 }
 
 class IncidentDetailsResponse {
-  const IncidentDetailsResponse({
-    required this.details,
-    required this.reports,
-  });
+  const IncidentDetailsResponse({required this.details, required this.reports});
 
   factory IncidentDetailsResponse.fromJson(Map<String, dynamic> json) {
     final detailMap = json['details'] is Map<String, dynamic>
@@ -288,7 +281,9 @@ class IncidentDetailsResponse {
       details: IncidentSummary.fromJson(detailMap),
       reports: reportsList
           .whereType<Map>()
-          .map((item) => IncidentReport.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => IncidentReport.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
     );
   }
@@ -366,10 +361,7 @@ class IncidentAnalysis {
 }
 
 class ResolveIncidentResponse {
-  const ResolveIncidentResponse({
-    required this.status,
-    required this.message,
-  });
+  const ResolveIncidentResponse({required this.status, required this.message});
 
   factory ResolveIncidentResponse.fromJson(Map<String, dynamic> json) {
     return ResolveIncidentResponse(
@@ -403,10 +395,7 @@ class AssignmentResponse {
 }
 
 class SosApiException implements Exception {
-  const SosApiException({
-    required this.message,
-    this.statusCode,
-  });
+  const SosApiException({required this.message, this.statusCode});
 
   final String message;
   final int? statusCode;
