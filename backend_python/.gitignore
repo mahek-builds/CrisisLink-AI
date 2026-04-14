@@ -1,2 +1,6 @@
 .env
 pytest_backend_test.sqlite3
+__pycache__/
+*.pyc   
+*.pyo
+*.pyd

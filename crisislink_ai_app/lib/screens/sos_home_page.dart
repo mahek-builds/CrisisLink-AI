@@ -180,9 +180,15 @@ class _SosHomePageState extends State<SosHomePage>
                           ),
                           child: Column(
                             children: [
-                              const Align(
-                                alignment: Alignment.topRight,
-                                child: OnlineChip(),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Align(
+                                    alignment: Alignment.topRight,
+                                    child: OnlineChip(),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 96),
                               const Text(

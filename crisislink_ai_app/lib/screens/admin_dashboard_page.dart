@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/sos_api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/incident_review_sheet.dart';
+import 'map_incidents_page.dart';
 
 class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({super.key, required this.sosApiService});
@@ -126,6 +127,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
+  Future<void> _navigateToMap() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MapIncidentsPage(sosApiService: widget.sosApiService),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,8 +165,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     ),
                     const Spacer(),
                     IconButton(
+                      onPressed: _navigateToMap,
+                      icon: const Icon(Icons.map_rounded),
+                      tooltip: 'View Map',
+                    ),
+                    IconButton(
                       onPressed: _loadDashboard,
                       icon: const Icon(Icons.refresh_rounded),
+                      tooltip: 'Refresh',
                     ),
                   ],
                 ),

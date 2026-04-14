@@ -220,6 +220,7 @@ class _ResponderDashboardPageState extends State<ResponderDashboardPage> {
                     IconButton(
                       onPressed: _loadIncidents,
                       icon: const Icon(Icons.refresh_rounded),
+                      tooltip: 'Refresh',
                     ),
                   ],
                 ),

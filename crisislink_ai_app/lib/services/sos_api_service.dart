@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class SosApiService {
   const SosApiService({
-    this.baseUrl = 'https://mahek2bhatia-crisislink.hf.space',
+    this.baseUrl = 'http://127.0.0.1:8000',
   });
 
   final String baseUrl;
@@ -67,12 +67,12 @@ class SosApiService {
   }
 
   Future<Map<String, dynamic>> _get(String path) async {
-    final response = await http.get(Uri.parse('$baseUrl$path'));
+    final response = await http.get(_buildUri(path));
     return _handleMapResponse(response);
   }
 
   Future<List<Map<String, dynamic>>> _getList(String path) async {
-    final response = await http.get(Uri.parse('$baseUrl$path'));
+    final response = await http.get(_buildUri(path));
     return _handleListResponse(response);
   }
 
@@ -81,7 +81,7 @@ class SosApiService {
     Map<String, dynamic>? body,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl$path'),
+      _buildUri(path),
       headers: const {'Content-Type': 'application/json'},
       body: body == null ? null : jsonEncode(body),
     );
@@ -162,6 +162,14 @@ class SosApiService {
     }
 
     return null;
+  }
+
+  Uri _buildUri(String path) {
+    final normalizedBase = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    return Uri.parse('$normalizedBase$normalizedPath');
   }
 }
 

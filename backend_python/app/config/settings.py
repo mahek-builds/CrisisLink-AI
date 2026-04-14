@@ -1,4 +1,5 @@
 import os
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
@@ -15,8 +16,7 @@ class Settings(BaseSettings):
     
     # API Security (Optional)
     API_KEY_NAME: str = "access_token"
-    
-    class Config:
-        case_sensitive = True
+
+    model_config = ConfigDict(case_sensitive=True)
 
 settings = Settings()
