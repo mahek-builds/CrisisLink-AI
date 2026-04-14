@@ -7,6 +7,7 @@ import 'package:crisislink_ai_app/services/user_session_service.dart';
 import 'package:crisislink_ai_app/widgets/sos_emergency_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
 
 class FakeConnectivityService implements ConnectivityService {
   const FakeConnectivityService(this.online);
@@ -22,7 +23,18 @@ class FakeLocationService implements LocationService {
 
   @override
   Future<AppLocation> getCurrentLocation() async {
-    return const AppLocation(latitude: 28.61, longitude: 77.21);
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+      );
+      return AppLocation(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+    } catch (e) {
+      // Fallback to default Delhi coordinates if location fetch fails
+      return const AppLocation(latitude: 28.6129, longitude: 77.2090);
+    }
   }
 }
 
@@ -51,8 +63,8 @@ class FakeSosApiService extends SosApiService {
     return <IncidentSummary>[
       IncidentSummary(
         id: 'incident-admin-1',
-        latitude: 28.61,
-        longitude: 77.21,
+        latitude: 28.6139,
+        longitude: 77.2090,
         type: 'medical',
         priority: 'HIGH',
         status: 'active',
@@ -67,8 +79,8 @@ class FakeSosApiService extends SosApiService {
     return <IncidentSummary>[
       IncidentSummary(
         id: 'incident-responder-1',
-        latitude: 28.62,
-        longitude: 77.22,
+        latitude: 28.5355,
+        longitude: 77.3910,
         type: 'fire',
         priority: 'CRITICAL',
         status: 'active',
@@ -85,8 +97,8 @@ class FakeSosApiService extends SosApiService {
     return IncidentDetailsResponse(
       details: IncidentSummary(
         id: incidentId,
-        latitude: 28.62,
-        longitude: 77.22,
+        latitude: 28.7041,
+        longitude: 77.1025,
         type: 'fire',
         priority: 'CRITICAL',
         status: 'active',
