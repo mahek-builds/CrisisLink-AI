@@ -1,7 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
+import '../services/location_service.dart';
+import '../services/sos_api_service.dart';
 import '../theme/app_theme.dart';
 
 enum EmergencyType { medical, safety, fire }
@@ -9,9 +9,16 @@ enum EmergencyType { medical, safety, fire }
 enum EmergencyFlowStep { type, situation, sending }
 
 class EmergencyTypePage extends StatefulWidget {
-  const EmergencyTypePage({super.key});
+  const EmergencyTypePage({
+    super.key,
+    required this.locationService,
+    required this.sosApiService,
+  });
 
   static const routeName = '/emergency-type';
+
+  final LocationService locationService;
+  final SosApiService sosApiService;
 
   @override
   State<EmergencyTypePage> createState() => _EmergencyTypePageState();
@@ -39,14 +46,26 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
     ],
   };
 
+  final TextEditingController _phoneController = TextEditingController();
+
   EmergencyFlowStep _step = EmergencyFlowStep.type;
   EmergencyType? _selectedType;
   String? _selectedSituation;
-  Timer? _sendingTimer;
+  AppLocation? _currentPosition;
+  String? _locationError;
+  String? _phoneError;
+  bool _isFetchingLocation = false;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
 
   @override
   void dispose() {
-    _sendingTimer?.cancel();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -58,31 +77,138 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
     });
   }
 
-  void _sendReport({String? situation}) {
+  Future<void> _loadLocation() async {
     setState(() {
-      _selectedSituation = situation;
-      _step = EmergencyFlowStep.sending;
+      _isFetchingLocation = true;
+      _locationError = null;
     });
 
-    _sendingTimer?.cancel();
-    _sendingTimer = Timer(const Duration(seconds: 2), () {
+    try {
+      final position = await widget.locationService.getCurrentLocation();
+
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Emergency report sent to responders.'),
-          ),
-        );
+      setState(() {
+        _isFetchingLocation = false;
+        _currentPosition = position;
+        _locationError = null;
+      });
+    } on LocationServiceException catch (error) {
+      if (!mounted) {
+        return;
+      }
 
-      Navigator.of(context).maybePop();
+      setState(() {
+        _isFetchingLocation = false;
+        _currentPosition = null;
+        _locationError = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isFetchingLocation = false;
+        _currentPosition = null;
+        _locationError =
+            'Unable to read your current location right now. Try again in a moment.';
+      });
+    }
+  }
+
+  Future<void> _sendReport({String? situation}) async {
+    final type = _selectedType;
+    if (type == null || _isSubmitting) {
+      return;
+    }
+
+    final phoneError = _validatePhoneNumber(_phoneController.text);
+    if (phoneError != null) {
+      setState(() {
+        _phoneError = phoneError;
+      });
+      return;
+    }
+
+    final position = _currentPosition;
+    if (position == null) {
+      setState(() {
+        _locationError =
+            _locationError ??
+            'Live location is required before the SOS can be sent.';
+      });
+      _showSnackBar(_locationError!);
+      return;
+    }
+
+    final normalizedPhone = _normalizePhoneNumber(_phoneController.text);
+
+    setState(() {
+      _phoneError = null;
+      _selectedSituation = situation;
+      _isSubmitting = true;
+      _step = EmergencyFlowStep.sending;
     });
+
+    try {
+      final response = await widget.sosApiService.createSosReport(
+        SosCreateRequest(
+          latitude: position.latitude,
+          longitude: position.longitude,
+          phoneNumber: normalizedPhone,
+          type: _apiTypeFor(type),
+        ),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      _showSnackBar(
+        'Alert sent. Incident ${response.incidentId} is ${response.priority} priority with ${response.uniqueReporters} reporter(s).',
+      );
+      Navigator.of(context).maybePop();
+    } on SosApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _step = EmergencyFlowStep.situation;
+      });
+      _showSnackBar(error.message);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _step = EmergencyFlowStep.situation;
+      });
+      _showSnackBar(
+        'The alert could not be submitted. Check your connection and try again.',
+      );
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message)),
+      );
   }
 
   void _handleExit() {
+    if (_isSubmitting) {
+      return;
+    }
+
     if (_step == EmergencyFlowStep.situation) {
       setState(() {
         _step = EmergencyFlowStep.type;
@@ -97,6 +223,8 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
 
   @override
   Widget build(BuildContext context) {
+    final gpsReady = _currentPosition != null;
+
     return Scaffold(
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -133,14 +261,24 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
                       ),
                     ),
                     const Spacer(),
-                    const _StatusTag(
-                      icon: Icons.location_on_outlined,
-                      label: 'GPS',
+                    _StatusTag(
+                      icon: gpsReady
+                          ? Icons.location_on_outlined
+                          : Icons.location_searching_rounded,
+                      label: gpsReady
+                          ? 'GPS Ready'
+                          : _isFetchingLocation
+                          ? 'Locating'
+                          : 'GPS Needed',
+                      color: gpsReady
+                          ? AppTheme.success
+                          : const Color(0xFFFFB454),
                     ),
                     const SizedBox(width: 10),
                     const _StatusTag(
                       icon: Icons.wifi_rounded,
                       label: 'Online',
+                      color: AppTheme.success,
                     ),
                   ],
                 ),
@@ -157,6 +295,22 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
                     EmergencyFlowStep.situation => _SituationStep(
                         emergencyType: _selectedType!,
                         situations: _situationChips[_selectedType!]!,
+                        phoneController: _phoneController,
+                        phoneErrorText: _phoneError,
+                        isFetchingLocation: _isFetchingLocation,
+                        locationLabel: _locationLabel,
+                        locationError: _locationError,
+                        isSubmitting: _isSubmitting,
+                        onPhoneChanged: () {
+                          if (_phoneError == null) {
+                            return;
+                          }
+
+                          setState(() {
+                            _phoneError = null;
+                          });
+                        },
+                        onRefreshLocation: _loadLocation,
                         onSendWithoutDescription: () => _sendReport(),
                         onSituationSelected: (situation) =>
                             _sendReport(situation: situation),
@@ -173,6 +327,17 @@ class _EmergencyTypePageState extends State<EmergencyTypePage> {
         ),
       ),
     );
+  }
+
+  String get _locationLabel {
+    final position = _currentPosition;
+    if (position == null) {
+      return _isFetchingLocation
+          ? 'Reading your current GPS coordinates.'
+          : 'Location not available yet.';
+    }
+
+    return 'Lat ${position.latitude.toStringAsFixed(5)} | Lng ${position.longitude.toStringAsFixed(5)}';
   }
 }
 
@@ -245,20 +410,41 @@ class _SituationStep extends StatelessWidget {
   const _SituationStep({
     required this.emergencyType,
     required this.situations,
+    required this.phoneController,
+    required this.phoneErrorText,
+    required this.isFetchingLocation,
+    required this.locationLabel,
+    required this.locationError,
+    required this.isSubmitting,
+    required this.onPhoneChanged,
+    required this.onRefreshLocation,
     required this.onSituationSelected,
     required this.onSendWithoutDescription,
   });
 
   final EmergencyType emergencyType;
   final List<String> situations;
+  final TextEditingController phoneController;
+  final String? phoneErrorText;
+  final bool isFetchingLocation;
+  final String locationLabel;
+  final String? locationError;
+  final bool isSubmitting;
+  final VoidCallback onPhoneChanged;
+  final Future<void> Function() onRefreshLocation;
   final ValueChanged<String> onSituationSelected;
   final VoidCallback onSendWithoutDescription;
 
   @override
   Widget build(BuildContext context) {
+    final locationReady = locationError == null && !isFetchingLocation;
+    final locationColor = locationReady
+        ? AppTheme.success
+        : const Color(0xFFFFB454);
+
     return SingleChildScrollView(
       key: const ValueKey('situation-step'),
-      padding: const EdgeInsets.fromLTRB(20, 70, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
       child: Column(
         children: [
           const Text(
@@ -271,10 +457,10 @@ class _SituationStep extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            'Select one or skip to send immediately',
+          const Text(
+            'Add your phone number and confirm live location before sending.',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textMuted,
               fontSize: 16,
             ),
@@ -286,6 +472,132 @@ class _SituationStep extends StatelessWidget {
               color: Color(0xFFD4CFD8),
               fontSize: 14,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF17181E),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Phone Number',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: phoneController,
+                  enabled: !isSubmitting,
+                  keyboardType: TextInputType.phone,
+                  onChanged: (_) => onPhoneChanged(),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Enter your phone number',
+                    hintStyle: const TextStyle(color: Color(0xFF7D7984)),
+                    errorText: phoneErrorText,
+                    filled: true,
+                    fillColor: const Color(0xFF111216),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: AppTheme.accentRed,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF17181E),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: locationColor.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: locationColor.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    locationReady
+                        ? Icons.my_location_rounded
+                        : Icons.location_searching_rounded,
+                    color: locationColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        locationReady ? 'Live Location Ready' : 'Live Location Needed',
+                        style: TextStyle(
+                          color: locationColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        locationError ?? locationLabel,
+                        style: const TextStyle(
+                          color: Color(0xFFD1CCD5),
+                          fontSize: 13,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: isSubmitting || isFetchingLocation
+                      ? null
+                      : () {
+                          onRefreshLocation();
+                        },
+                  icon: isFetchingLocation
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  color: Colors.white,
+                  tooltip: 'Refresh location',
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
@@ -303,7 +615,7 @@ class _SituationStep extends StatelessWidget {
               final situation = situations[index];
               return _SituationChip(
                 label: situation,
-                onTap: () => onSituationSelected(situation),
+                onTap: isSubmitting ? null : () => onSituationSelected(situation),
               );
             },
           ),
@@ -311,17 +623,18 @@ class _SituationStep extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: onSendWithoutDescription,
+              onPressed: isSubmitting ? null : onSendWithoutDescription,
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.accentRed,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: AppTheme.accentRed.withValues(alpha: 0.4),
                 minimumSize: const Size.fromHeight(54),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: const Text(
-                'Send Without Description',
+                'Send Live Alert',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
@@ -388,7 +701,7 @@ class _SendingStep extends StatelessWidget {
                 _PulsingDot(),
                 SizedBox(width: 10),
                 Text(
-                  'Location transmitted',
+                  'Transmitting live backend request',
                   style: TextStyle(
                     color: AppTheme.success,
                     fontSize: 14,
@@ -408,22 +721,24 @@ class _StatusTag extends StatelessWidget {
   const _StatusTag({
     required this.icon,
     required this.label,
+    required this.color,
   });
 
   final IconData icon;
   final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: AppTheme.success, size: 16),
+        Icon(icon, color: color, size: 16),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: AppTheme.success,
+          style: TextStyle(
+            color: color,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -501,7 +816,7 @@ class _SituationChip extends StatelessWidget {
   });
 
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -519,8 +834,10 @@ class _SituationChip extends StatelessWidget {
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xFFF3EFF4),
+          style: TextStyle(
+            color: onTap == null
+                ? const Color(0xFF8B8790)
+                : const Color(0xFFF3EFF4),
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -580,4 +897,40 @@ String _labelForType(EmergencyType type) {
     case EmergencyType.fire:
       return 'Fire Emergency';
   }
+}
+
+String _apiTypeFor(EmergencyType type) {
+  switch (type) {
+    case EmergencyType.medical:
+      return 'medical';
+    case EmergencyType.safety:
+      return 'police';
+    case EmergencyType.fire:
+      return 'fire';
+  }
+}
+
+String _normalizePhoneNumber(String input) {
+  final trimmed = input.trim();
+  final hasLeadingPlus = trimmed.startsWith('+');
+  final digitsOnly = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+
+  if (digitsOnly.isEmpty) {
+    return '';
+  }
+
+  return hasLeadingPlus ? '+$digitsOnly' : digitsOnly;
+}
+
+String? _validatePhoneNumber(String input) {
+  final normalized = _normalizePhoneNumber(input);
+  if (normalized.isEmpty) {
+    return 'Phone number is required to submit the alert.';
+  }
+
+  if (!RegExp(r'^\+?\d{7,15}$').hasMatch(normalized)) {
+    return 'Enter a valid phone number before sending.';
+  }
+
+  return null;
 }

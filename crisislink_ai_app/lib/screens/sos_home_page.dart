@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
 import '../services/connectivity_service.dart';
+import '../services/location_service.dart';
+import '../services/sos_api_service.dart';
+import 'admin_dashboard_page.dart';
 import 'emergency_type_page.dart';
 import 'offline_emergency_page.dart';
+import 'responder_dashboard_page.dart';
 import '../theme/app_theme.dart';
 import '../widgets/online_chip.dart';
 import '../widgets/sos_emergency_button.dart';
@@ -13,11 +17,15 @@ class SosHomePage extends StatefulWidget {
   const SosHomePage({
     super.key,
     required this.connectivityService,
+    required this.locationService,
+    required this.sosApiService,
   });
 
   static const routeName = '/sos';
 
   final ConnectivityService connectivityService;
+  final LocationService locationService;
+  final SosApiService sosApiService;
 
   @override
   State<SosHomePage> createState() => _SosHomePageState();
@@ -64,7 +72,10 @@ class _SosHomePageState extends State<SosHomePage>
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => isOnline
-            ? const EmergencyTypePage()
+            ? EmergencyTypePage(
+                locationService: widget.locationService,
+                sosApiService: widget.sosApiService,
+              )
             : const OfflineEmergencyPage(),
       ),
     );
@@ -76,6 +87,28 @@ class _SosHomePageState extends State<SosHomePage>
     setState(() {
       _isRoutingFromSos = false;
     });
+  }
+
+  Future<void> _handleStaffAuthenticated(
+    StaffRole role,
+    String staffId,
+  ) async {
+    setState(() {
+      _staffExpanded = false;
+    });
+
+    final route = MaterialPageRoute<void>(
+      builder: (_) => role == StaffRole.admin
+          ? AdminDashboardPage(
+              sosApiService: widget.sosApiService,
+            )
+          : ResponderDashboardPage(
+              sosApiService: widget.sosApiService,
+              initialResponderId: staffId,
+            ),
+    );
+
+    await Navigator.of(context).push(route);
   }
 
   @override
@@ -101,7 +134,7 @@ class _SosHomePageState extends State<SosHomePage>
             child: SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  const collapsedHeight = 82.0;
+                  const collapsedHeight = 96.0;
                   final maxExpandedHeight = math.max(
                     collapsedHeight,
                     constraints.maxHeight - 24,
@@ -264,6 +297,7 @@ class _SosHomePageState extends State<SosHomePage>
                               _selectedRole = role;
                             });
                           },
+                          onAuthenticated: _handleStaffAuthenticated,
                         ),
                       ),
                     ],

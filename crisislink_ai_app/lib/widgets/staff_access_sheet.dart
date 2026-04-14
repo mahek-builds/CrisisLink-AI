@@ -15,6 +15,7 @@ class StaffAccessSheet extends StatefulWidget {
     required this.selectedRole,
     required this.onToggle,
     required this.onRoleChanged,
+    required this.onAuthenticated,
   });
 
   final bool expanded;
@@ -23,6 +24,7 @@ class StaffAccessSheet extends StatefulWidget {
   final StaffRole selectedRole;
   final VoidCallback onToggle;
   final ValueChanged<StaffRole> onRoleChanged;
+  final Future<void> Function(StaffRole role, String staffId) onAuthenticated;
 
   @override
   State<StaffAccessSheet> createState() => _StaffAccessSheetState();
@@ -40,7 +42,7 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     FocusScope.of(context).unfocus();
 
     final id = _idController.text.trim();
@@ -82,6 +84,8 @@ class _StaffAccessSheetState extends State<StaffAccessSheet> {
         ),
       ),
     );
+
+    await widget.onAuthenticated(widget.selectedRole, id);
   }
 
   @override
